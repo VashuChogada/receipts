@@ -1,0 +1,14 @@
+Joe's Diner
+742 Evergreen Terrace
+Springfield, IL 62704
+Tel 217-555-0144
+Server: Sam     Table 4
+10-05-2025  7:41 PM
+Cheeseburger         12.50
+Fries                 4.25
+Iced Tea              2.99
+Sub Total            19.74
+Sales Tax             1.78
+Grand Total          21.52
+CASH                 30.00
+CHANGE                8.48

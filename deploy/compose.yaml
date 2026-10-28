@@ -1,0 +1,84 @@
+# Receipts (docs/setup.md). Stock images only: the app's code and the built UI
+# are plain files in ${RECEIPTS_DIR}/app, put there by `node scripts/deploy.mjs`,
+# so nothing is built on the server.
+#
+#   docker compose --env-file .env -f deploy/compose.yaml up -d
+#
+# Settings come from .env (copy .env.example). For a web UI that takes a pasted
+# compose file and no .env (ZimaOS, CasaOS), `node scripts/deploy.mjs --compose`
+# prints this file with your values filled in.
+#
+# ${RECEIPTS_DIR} on the server:
+#   app/       the code and built UI, filled by each deploy
+#   data/      receipts/ (the folder of record), receipts.db (the index),
+#              venv/ and models/ (set up on first start), cache/
+#   config/    the Caddyfile, copied by each deploy
+#   caddy/     Caddy's state, including the local CA that signs the HTTPS cert
+#
+# Ports: HTTP_PORT on the LAN, plus HTTPS_PORT if you set up HTTPS for phones
+# (optional); the app on 127.0.0.1:APP_PORT only. LAN only: Caddy drops
+# requests from public addresses.
+name: receipts
+services:
+  app:
+    image: python:3.12-slim
+    container_name: receipts-app
+    restart: unless-stopped
+    # Host networking: the app binds 127.0.0.1, so only Caddy can reach it.
+    # (ZimaOS and CasaOS write this onto every service they save anyway.)
+    network_mode: host
+    # Root, because the folders may live on a network share that isn't owned
+    # by any image user.
+    user: "0:0"
+    # The first start installs Tesseract and the Python packages (a few
+    # minutes); later starts take seconds (deploy/start.sh).
+    command: sh /app/start.sh
+    environment:
+      TZ: ${TZ:-UTC}
+      DATA_DIR: /data
+      DATE_ORDER: ${DATE_ORDER:-MDY}
+      CURRENCY: ${CURRENCY:-USD}
+      AUTO_FILE: "on"
+      SEMANTIC_SEARCH: "on"
+      # The OCR and search models run in a helper process that exits after
+      # this long without a scan or search, giving its memory back.
+      MODEL_IDLE_MINUTES: "5"
+      SESSION_DAYS: "90"
+      OMP_THREAD_LIMIT: "1"
+      APP_PORT: ${APP_PORT:-8491}
+    volumes:
+      - ${RECEIPTS_DIR:?set RECEIPTS_DIR in .env}/app:/app:ro
+      - ${RECEIPTS_DIR}/data:/data
+    # A ceiling, not a reservation: idle is ~60 MB. Reading a receipt briefly
+    # takes ~300 MB more in the model helper; the rest is room for file cache.
+    mem_limit: 1g
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: receipts-caddy
+    restart: unless-stopped
+    network_mode: host
+    # --watch: a deploy that changes the Caddyfile applies without a restart.
+    command: caddy run --config /etc/caddy/Caddyfile --adapter caddyfile --watch
+    environment:
+      # Only for the optional HTTPS address (docs/setup.md).
+      RECEIPTS_HOST: ${RECEIPTS_HOST:-localhost}
+      APP_PORT: ${APP_PORT:-8491}
+      HTTP_PORT: ${HTTP_PORT:-8490}
+      HTTPS_PORT: ${HTTPS_PORT:-8493}
+      CADDY_ADMIN_PORT: ${CADDY_ADMIN_PORT:-2493}
+    volumes:
+      - ${RECEIPTS_DIR}/config:/etc/caddy:ro
+      - ${RECEIPTS_DIR}/caddy/data:/data
+      - ${RECEIPTS_DIR}/caddy/config:/config
+    mem_limit: 64m
+
+# ZimaOS and CasaOS: the app's name and the port its icon opens. Other hosts
+# ignore this.
+x-casaos:
+  title:
+    custom: Receipts
+  main: caddy
+  scheme: http
+  port_map: "${HTTP_PORT:-8490}"
+  index: /

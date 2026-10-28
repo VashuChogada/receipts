@@ -1,0 +1,18 @@
+STARBUCKS
+Store #12345
+500 Congress Ave
+Austin, TX 78701
+(512) 555-0199
+
+Mar 2, 2026 8:05 AM
+Order #: 88
+
+1 Grande Latte 5.45
+1 Butter Croissant 3.95
+
+Subtotal $9.40
+Tax $0.78
+Total $10.18
+
+Apple Pay $10.18
+Thank you!

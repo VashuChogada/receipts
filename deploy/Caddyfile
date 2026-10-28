@@ -1,0 +1,57 @@
+# Receipts' own Caddy (docs/setup.md). The ports and the server's LAN address
+# come from the environment (deploy/compose.yaml); the defaults are below.
+#
+#   http://<host>:8490    the app. This is all most people need.
+#   https://<host>:8493   optional: the app with a certificate from Caddy's own
+#                         local CA. Phones that trust /ca.crt get the live
+#                         camera viewfinder and can install the app.
+#
+# LAN only: anything from a public address, or relayed by a Cloudflare tunnel,
+# is dropped.
+{
+	# Only on the server's loopback, for --watch reloads.
+	admin localhost:{$CADDY_ADMIN_PORT:2493}
+	local_certs
+	skip_install_trust
+	auto_https disable_redirects
+	# Phones connecting by IP send no SNI; use the IP's certificate for them.
+	default_sni {$RECEIPTS_HOST:localhost}
+}
+
+(app) {
+	@outside {
+		not remote_ip private_ranges
+	}
+	@tunnel header Cf-Connecting-Ip *
+	abort @outside
+	abort @tunnel
+
+	encode zstd gzip
+	request_body {
+		max_size 30MB
+	}
+	header {
+		-Server
+		Permissions-Policy "camera=(self), microphone=(), geolocation=()"
+	}
+	reverse_proxy 127.0.0.1:{$APP_PORT:8491}
+}
+
+http://:{$HTTP_PORT:8490} {
+	# The root of Caddy's local CA, for a phone to trust once.
+	handle /ca.crt {
+		root * /data/caddy/pki/authorities/local
+		rewrite * /root.crt
+		header Content-Type application/x-x509-ca-cert
+		header Content-Disposition "attachment; filename=receipts-ca.crt"
+		file_server
+	}
+	handle {
+		import app
+	}
+}
+
+https://{$RECEIPTS_HOST:localhost}:{$HTTPS_PORT:8493} {
+	tls internal
+	import app
+}

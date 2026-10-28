@@ -1,0 +1,10 @@
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+python-multipart==0.0.20
+pillow==13.0.0
+pytesseract==0.3.13
+fastembed==0.9.1
+sqlite-vec==0.1.6
+rapidfuzz==3.11.0
+argon2-cffi==23.1.0
+rapidocr==3.10.0
