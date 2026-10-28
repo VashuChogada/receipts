@@ -27,6 +27,12 @@ function readParams(search: string): Params {
   return out;
 }
 
+/** "2026" when the date filter is exactly that whole year, else null. */
+function yearOf(p: Params): string | null {
+  const from = String(p.date_from ?? '');
+  return from.endsWith('-01-01') && p.date_to === `${from.slice(0, 4)}-12-31` ? from.slice(0, 4) : null;
+}
+
 export function Receipts() {
   const store = useStore();
   const loc = useLocation();
@@ -104,7 +110,6 @@ export function Receipts() {
   const exportQuery = qs({ ...params });
 
   // Quick filters: a year, and the tags that matter at tax time.
-  const yearOf = (p: Params) => (p.date_from && p.date_to === `${String(p.date_from).slice(0, 4)}-12-31` && String(p.date_from).endsWith('-01-01') ? String(p.date_from).slice(0, 4) : null);
   const activeYear = yearOf(params);
   const setYear = (y: string | null) => {
     const next = { ...params };
