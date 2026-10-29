@@ -66,5 +66,35 @@ fi
 log "starting"
 export HF_HUB_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 STATIC_DIR="$APP/static"
 cd "$APP"
-exec "$VENV/bin/uvicorn" app.main:app --host 127.0.0.1 --port "${APP_PORT:-8491}" --workers 1 \
-  --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-server-header
+"$VENV/bin/uvicorn" app.main:app --host 127.0.0.1 --port "${APP_PORT:-8491}" --workers 1 \
+  --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-server-header &
+pid=$!
+
+# A deploy that changes the server code touches /data/.restart
+# (scripts/box-deploy.sh): uvicorn stops and this script starts over, so new
+# packages are installed and the new code loads, without restarting the
+# container.
+stamp() { stat -c %Y /data/.restart 2>/dev/null || echo 0; }
+(
+  seen="$(stamp)"
+  while kill -0 "$pid" 2>/dev/null; do
+    sleep 2
+    if [ "$(stamp)" != "$seen" ]; then
+      log "new server code deployed: restarting"
+      touch /tmp/receipts-restart
+      kill -TERM "$pid"
+      exit 0
+    fi
+  done
+) &
+
+trap 'kill -TERM "$pid" 2>/dev/null' TERM INT
+code=0
+wait "$pid" || code=$?
+while kill -0 "$pid" 2>/dev/null; do wait "$pid" || code=$?; done
+
+if [ -f /tmp/receipts-restart ]; then
+  rm -f /tmp/receipts-restart
+  exec sh "$APP/start.sh"
+fi
+exit "$code"

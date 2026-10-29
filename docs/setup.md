@@ -47,6 +47,16 @@ The deploy script can print the compose file with your settings filled in.
 If you change `.env` later, paste the new `--compose` output into the app's
 settings.
 
+### Deploying via zima-hub
+
+On the Zima box, [zima-hub](https://github.com/VashuChogada/zima-hub) deploys
+each push to `main` by itself. It runs `scripts/box-deploy.sh` from a checkout
+on the box, which uses the same `deploy.mjs` and needs no share or PC. When
+the server code changes, that script touches `data/.restart`. `start.sh` sees
+the change and restarts the app on the new code, so you never have to restart
+it from the dashboard. Running the deploy from a PC still works as a
+fallback.
+
 ## Adding people
 
 The first account you create is the admin. Add everyone else in Settings →
