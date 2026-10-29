@@ -71,7 +71,11 @@ machine.
    first account.
 
 To update later, pull the latest code and run `node scripts/deploy.mjs` again.
-If it says the server code changed, run `docker restart receipts-app`.
+If it says the server code changed, restart the app: `docker restart
+receipts-app`, or touch `data/.restart` in the receipts folder, which
+restarts it in place. On a Zima box with
+[zima-hub](https://github.com/VashuChogada/zima-hub), a push to `main` does
+all of this by itself ([docs/setup.md](docs/setup.md#deploying-via-zima-hub)).
 
 Using ZimaOS or CasaOS? See [docs/setup.md](docs/setup.md#zimaos-or-casaos).
 
