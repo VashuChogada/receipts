@@ -1,10 +1,9 @@
 # Receipts' own Caddy (docs/setup.md). The ports and the server's LAN address
-# come from the environment (deploy/compose.yaml); the defaults are below.
+# come from the environment (deploy/https/zima.json); the defaults are below.
 #
-#   http://<host>:8490    the app. This is all most people need.
-#   https://<host>:8493   optional: the app with a certificate from Caddy's own
-#                         local CA. Phones that trust /ca.crt get the live
-#                         camera viewfinder and can install the app.
+#   https://<host>:8493   the app, with a certificate from Caddy's own local CA.
+#                         Phones that trust /ca.crt get the live camera
+#                         viewfinder and can install the app.
 #
 # LAN only: anything from a public address, or relayed by a Cloudflare tunnel,
 # is dropped.
@@ -37,7 +36,14 @@
 	reverse_proxy 127.0.0.1:{$APP_PORT:8491}
 }
 
-http://:{$HTTP_PORT:8490} {
+# Loopback only: zima-hub's own LAN port for this app (deploy/https/zima.json)
+# proxies here. Phones and the PC use the https address.
+http://127.0.0.1:{$HTTP_PORT:8490} {
+	import app
+}
+
+https://{$RECEIPTS_HOST:localhost}:{$HTTPS_PORT:8493} {
+	tls internal
 	# The root of Caddy's local CA, for a phone to trust once.
 	handle /ca.crt {
 		root * /data/caddy/pki/authorities/local
@@ -49,9 +55,4 @@ http://:{$HTTP_PORT:8490} {
 	handle {
 		import app
 	}
-}
-
-https://{$RECEIPTS_HOST:localhost}:{$HTTPS_PORT:8493} {
-	tls internal
-	import app
 }

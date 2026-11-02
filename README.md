@@ -43,7 +43,7 @@ node <zima-hub>/cli/zima.mjs add app receipts VashuChogada/receipts --dir deploy
 node <zima-hub>/cli/zima.mjs add app receipts-https VashuChogada/receipts --dir deploy/https
 ```
 
-Then open `http://<your-server>:8490` on your phone or computer and create the
+Then open `https://<your-server>:8493` (or the hub's LAN port for it, from `zima status`) and create the
 first account. The first start takes a few minutes while it installs what it
 needs; watch it with `zima logs apps/receipts`. After that, every push to
 `main` deploys by itself.
