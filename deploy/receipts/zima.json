@@ -9,6 +9,7 @@
   "idle": "never",
   "vars": {
     "TZ": "America/Chicago",
+    "DATA_DIR": "/data",
     "APP_PORT": "8491",
     "DATE_ORDER": "MDY",
     "CURRENCY": "USD",
