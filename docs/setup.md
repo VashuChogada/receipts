@@ -4,58 +4,48 @@ The README has the quick version. This covers the rest.
 
 ## What runs where
 
-Two containers, both from standard images (`deploy/compose.yaml`):
+Two hub apps ([zima-hub](https://github.com/VashuChogada/zima-hub)), both from
+standard images, both from this repo:
 
-- `receipts-app` runs the app. On its first start it installs Tesseract and
-  the Python packages into the data folder, so later starts take seconds.
-- `receipts-caddy` is the web server in front of it, on port 8490. It only
-  answers devices on your home network.
+- `receipts` (`deploy/receipts/zima.json`) runs the app in `python:3.12-slim`,
+  listening on 127.0.0.1:8491. Its build (`scripts/assemble.sh`) builds the
+  web app and assembles the code into `deploy/receipts/out`, which the
+  container mounts read-only at `/app`. Each start installs Tesseract (about
+  25 s, since every deploy makes a new container); the Python packages and
+  models live in the data folder, so they install once.
+- `receipts-https` (`deploy/https/zima.json`) runs Caddy in `caddy:2-alpine`
+  in front of it: `http://<box>:8490` and `https://<box>:8493`. It only
+  answers devices on your home network. Both apps stay always on, because
+  this Caddy talks to :8491 directly, which the hub's waker doesn't cover.
 
-The code isn't baked into an image. `node scripts/deploy.mjs` builds the web
-app and copies everything into `RECEIPTS_DIR`:
+The hub also gives each app its own LAN port (`zima status`); the app itself
+is on that one without HTTPS.
+
+On the box:
 
 ```
-RECEIPTS_DIR/
-  app/          the code (replaced on every deploy)
-  config/       the web server's config (replaced on every deploy)
-  data/
-    receipts/   your scans and their .json files: back this up
-    receipts.db search index, rebuilt from receipts/ if it's missing
-    venv/       Python packages
-    models/     the reading and search models
-  caddy/        the web server's own files
+Data/apps/receipts/data/
+  receipts/   your scans and their .json files: back this up
+  receipts.db search index, rebuilt from receipts/ if it's missing
+  venv/       Python packages
+  models/     the reading and search models
+  cache/
+Data/apps/receipts-https/data/   Caddy's own files, including the local CA
 ```
 
-Run `node scripts/deploy.mjs --dry-run` to see what a deploy would copy.
+## Deploying
 
-## ZimaOS or CasaOS
+A push to `main` deploys both apps. Or `zima deploy receipts`. Each deploy
+makes a new container, so a server-code change needs no extra restart.
 
-These take a compose file pasted into their dashboard and don't read `.env`.
-The deploy script can print the compose file with your settings filled in.
+## Problems
 
-1. Make a folder for Receipts on the server, for example
-   `/media/Storage/Data/receipts`, and share it over SMB so your PC can reach
-   it, for example as `//server/Storage/Data/receipts`.
-2. In `.env`, set `RECEIPTS_DIR` to the server path and `RECEIPTS_SHARE` to
-   the share path.
-3. Run `node scripts/deploy.mjs` on your PC.
-4. Run `node scripts/deploy.mjs --compose`, copy what it prints, and add it as
-   a custom app in the dashboard.
-5. When a deploy says the server code changed, restart the app from the
-   dashboard.
-
-If you change `.env` later, paste the new `--compose` output into the app's
-settings.
-
-### Deploying via zima-hub
-
-On the Zima box, [zima-hub](https://github.com/VashuChogada/zima-hub) deploys
-each push to `main` by itself. It runs `scripts/box-deploy.sh` from a checkout
-on the box, which uses the same `deploy.mjs` and needs no share or PC. When
-the server code changes, that script touches `data/.restart`. `start.sh` sees
-the change and restarts the app on the new code, so you never have to restart
-it from the dashboard. Running the deploy from a PC still works as a
-fallback.
+- **A receipt stays on "Reading", or the page shows a 502 error.** Check
+  `zima logs apps/receipts`. On the very first start it can take a few
+  minutes before the app is up.
+- **Search misses something.** Settings → Rebuild index.
+- **Dates read the wrong way round (04/03 vs 03/04).** Set `DATE_ORDER` in
+  `deploy/receipts/zima.json`.
 
 ## Adding people
 
@@ -84,16 +74,6 @@ cd backend && DATA_DIR=data-dev STATIC_DIR=../frontend/dist MODEL_CACHE=.models 
 
 Tests: `python -m pytest` in `backend/`, `npm test` in `frontend/`.
 
-## Problems
-
-- **A receipt stays on "Reading", or the page shows a 502 error.** Check
-  `docker logs receipts-app`. On the very first start it can take a few
-  minutes before the app is up.
-- **Search misses something.** Settings → Rebuild index.
-- **Dates read the wrong way round (04/03 vs 03/04).** Set `DATE_ORDER` in
-  `.env`.
-- **A port is already in use.** Change `HTTP_PORT` or `APP_PORT` in `.env`.
-
 ## Optional: HTTPS for phones
 
 You don't need this. Over plain HTTP everything works, and the scan button
@@ -103,8 +83,8 @@ password on the Wi-Fi.
 
 To turn it on:
 
-1. In `.env`, set `RECEIPTS_HOST` to the server's IP address on your network,
-   deploy again and restart the containers.
+1. `RECEIPTS_HOST` in `deploy/https/zima.json` is the box's IP address on your
+   network; change it there if that changes.
 2. On each phone, open `http://<server>:8490/ca.crt` and install the
    certificate.
    - iPhone: Settings → General → VPN & Device Management → install the
@@ -114,5 +94,5 @@ To turn it on:
      certificate → CA certificate.
 3. Open `https://<server>:8493` from then on.
 
-Keep the `caddy/` folder: if it's lost, every phone has to install a new
+Keep `Data/apps/receipts-https/data`: if it's lost, every phone has to install a new
 certificate.
