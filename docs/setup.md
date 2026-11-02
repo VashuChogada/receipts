@@ -14,7 +14,7 @@ standard images, both from this repo:
   25 s, since every deploy makes a new container); the Python packages and
   models live in the data folder, so they install once.
 - `receipts-https` (`deploy/https/zima.json`) runs Caddy in `caddy:2-alpine`
-  in front of it: `http://<box>:8490` and `https://<box>:8493`. It only
+  in front of it at `https://<box>:8493`. It only
   answers devices on your home network. Both apps stay always on, because
   this Caddy talks to :8491 directly, which the hub's waker doesn't cover.
 
@@ -85,7 +85,7 @@ To turn it on:
 
 1. `RECEIPTS_HOST` in `deploy/https/zima.json` is the box's IP address on your
    network; change it there if that changes.
-2. On each phone, open `http://<server>:8490/ca.crt` and install the
+2. On each phone, open `https://<server>:8493/ca.crt` and install the
    certificate.
    - iPhone: Settings → General → VPN & Device Management → install the
      profile, then Settings → General → About → Certificate Trust Settings →
