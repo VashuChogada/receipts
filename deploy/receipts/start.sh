@@ -1,14 +1,14 @@
 #!/bin/sh
-# How receipts-app starts inside the stock python:3.12-slim image
-# (deploy/compose.yaml). Nothing is built into an image: the code is the
-# folder scripts/deploy.mjs copies to $RECEIPTS_DIR/app, and this sets up what
-# the code needs on first start:
+# How the receipts app starts inside the stock python:3.12-slim image
+# (deploy/receipts/zima.json). Nothing is built into an image: the code is the
+# folder scripts/assemble.sh builds, which zima-hub mounts at /app, and this
+# sets up what the code needs on start:
 #
-#   Tesseract and poppler   apt, once per container (a few hundred MB, ~1 min)
+#   Tesseract and poppler   apt, once per container (~25 s; every deploy makes a new one)
 #   Python packages         a venv in /data/venv, again only when
 #                           requirements.txt changes (~2 min the first time)
 #   the search model        /data/models, downloaded once (67 MB)
-#   the OCR model           /data/models/rapidocr, copied by the deploy (31 MB)
+#   the OCR model           /data/models/rapidocr (31 MB, fetched from RapidOCR on first use)
 #
 # After that a restart takes seconds.
 set -eu
@@ -70,31 +70,8 @@ cd "$APP"
   --proxy-headers --forwarded-allow-ips 127.0.0.1 --no-server-header &
 pid=$!
 
-# A deploy that changes the server code touches /data/.restart
-# (scripts/box-deploy.sh): uvicorn stops and this script starts over, so new
-# packages are installed and the new code loads, without restarting the
-# container.
-stamp() { stat -c %Y /data/.restart 2>/dev/null || echo 0; }
-(
-  seen="$(stamp)"
-  while kill -0 "$pid" 2>/dev/null; do
-    sleep 2
-    if [ "$(stamp)" != "$seen" ]; then
-      log "new server code deployed: restarting"
-      touch /tmp/receipts-restart
-      kill -TERM "$pid"
-      exit 0
-    fi
-  done
-) &
-
 trap 'kill -TERM "$pid" 2>/dev/null' TERM INT
 code=0
 wait "$pid" || code=$?
 while kill -0 "$pid" 2>/dev/null; do wait "$pid" || code=$?; done
-
-if [ -f /tmp/receipts-restart ]; then
-  rm -f /tmp/receipts-restart
-  exec sh "$APP/start.sh"
-fi
 exit "$code"

@@ -34,71 +34,27 @@ The reading happens on your server. Nothing is sent anywhere else.
 
 ## Setup
 
-You need a Linux machine with Docker that stays on (a home server or NAS),
-and Node 20 or newer on the computer you set it up from. They can be the same
-machine.
+It runs on a Zima box under [zima-hub](https://github.com/VashuChogada/zima-hub),
+which builds it from this repo and runs it in standard Docker images. Nothing
+is built on your PC.
 
-1. Get the code and make your settings file:
+```bash
+node <zima-hub>/cli/zima.mjs add app receipts VashuChogada/receipts --dir deploy/receipts
+node <zima-hub>/cli/zima.mjs add app receipts-https VashuChogada/receipts --dir deploy/https
+```
 
-   ```bash
-   git clone https://github.com/VashuChogada/receipts.git
-   cd receipts
-   cp .env.example .env
-   ```
+Then open `http://<your-server>:8490` on your phone or computer and create the
+first account. The first start takes a few minutes while it installs what it
+needs; watch it with `zima logs apps/receipts`. After that, every push to
+`main` deploys by itself.
 
-2. Open `.env` and set `RECEIPTS_DIR` to a folder on the server, for example
-   `/srv/receipts`. If you're setting it up from a different computer, also set
-   `RECEIPTS_SHARE` to that same folder as your computer sees it (a network
-   share).
-
-3. Build the app and copy it to that folder:
-
-   ```bash
-   cd frontend && npm ci && cd ..
-   node scripts/deploy.mjs
-   ```
-
-4. Start it on the server:
-
-   ```bash
-   docker compose --env-file .env -f deploy/compose.yaml up -d
-   ```
-
-   The first start takes a few minutes while it installs what it needs. You
-   can watch with `docker logs -f receipts-app`.
-
-5. Open `http://<your-server>:8490` on your phone or computer and create the
-   first account.
-
-To update later, pull the latest code and run `node scripts/deploy.mjs` again.
-If it says the server code changed, restart the app: `docker restart
-receipts-app`, or touch `data/.restart` in the receipts folder, which
-restarts it in place. On a Zima box with
-[zima-hub](https://github.com/VashuChogada/zima-hub), a push to `main` does
-all of this by itself ([docs/setup.md](docs/setup.md#deploying-via-zima-hub)).
-
-Using ZimaOS or CasaOS? See [docs/setup.md](docs/setup.md#zimaos-or-casaos).
-
-## Settings
-
-These go in `.env`. Only `RECEIPTS_DIR` is required.
-
-| Setting | Default | What it does |
-|---|---|---|
-| `RECEIPTS_DIR` | | Folder on the server where everything is kept |
-| `RECEIPTS_SHARE` | same as `RECEIPTS_DIR` | Where `deploy.mjs` copies to, if you build on another computer |
-| `TZ` | `UTC` | Your time zone |
-| `DATE_ORDER` | `MDY` | `MDY` reads 03/04 as March 4, `DMY` as 3 April |
-| `CURRENCY` | `USD` | Currency code for amounts |
-| `HTTP_PORT` | `8490` | Port the app is on |
-| `APP_PORT` | `8491` | Internal port, only change it if 8491 is taken |
-
-To have every scan wait for you instead of filing itself, set `AUTO_FILE`
-to `"off"` in `deploy/compose.yaml`.
+Settings (time zone, date order, currency) are the `vars` in
+[deploy/receipts/zima.json](deploy/receipts/zima.json). Details are in
+[docs/setup.md](docs/setup.md).
 
 ## Backups
 
-Everything that matters is in `RECEIPTS_DIR/data/receipts/`: the pictures and
+Everything that matters is in `Data/apps/receipts/data/receipts/` on the box: the pictures and
 a `.json` file next to each one. Copy that folder somewhere now and then. If
 the database is ever lost, the app rebuilds it from those files.
 
@@ -112,8 +68,8 @@ models load only when needed and unload after a few minutes, so the app idles
 at about 60 MB of memory.
 
 It runs on two standard Docker images (`python:3.12-slim` and
-`caddy:2-alpine`). There's no custom image to build or download: the deploy
-script copies the code into a folder and the containers run it from there.
+`caddy:2-alpine`). There's no custom image to build or download: the hub
+assembles the code into a folder and the containers run it from there.
 It's meant for your home network only, and turns away requests from the
 internet.
 

@@ -1,0 +1,15 @@
+{
+  "kind": "container",
+  "image": "caddy:2-alpine",
+  "cmd": "caddy run --config /app/Caddyfile --adapter caddyfile --watch",
+  "port": 8490,
+  "memory": "64m",
+  "idle": "never",
+  "vars": {
+    "RECEIPTS_HOST": "192.168.68.80",
+    "APP_PORT": "8491",
+    "HTTP_PORT": "8490",
+    "HTTPS_PORT": "8493",
+    "CADDY_ADMIN_PORT": "2493"
+  }
+}

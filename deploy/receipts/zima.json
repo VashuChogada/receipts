@@ -1,0 +1,21 @@
+{
+  "kind": "container",
+  "image": "python:3.12-slim",
+  "build": "sh ../../scripts/assemble.sh",
+  "app": "out",
+  "cmd": "sh /app/start.sh",
+  "port": 8491,
+  "memory": "1g",
+  "idle": "never",
+  "vars": {
+    "TZ": "America/Chicago",
+    "APP_PORT": "8491",
+    "DATE_ORDER": "MDY",
+    "CURRENCY": "USD",
+    "AUTO_FILE": "on",
+    "SEMANTIC_SEARCH": "on",
+    "MODEL_IDLE_MINUTES": "5",
+    "SESSION_DAYS": "90",
+    "OMP_THREAD_LIMIT": "1"
+  }
+}
