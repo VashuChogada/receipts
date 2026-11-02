@@ -1,12 +1,13 @@
 {
   "kind": "container",
   "image": "caddy:2-alpine",
-  "cmd": "caddy run --config /app/Caddyfile --adapter caddyfile --watch",
+  "cmd": "sh /app/run.sh",
   "port": 8490,
-  "memory": "64m",
+  "memory": "128m",
   "idle": "never",
+  "env": ["CLOUDFLARE_API_TOKEN"],
   "vars": {
-    "RECEIPTS_HOST": "192.168.68.80",
+    "RECEIPTS_HOST": "receipts.vashu.app",
     "APP_PORT": "8491",
     "HTTP_PORT": "8490",
     "HTTPS_PORT": "8493",

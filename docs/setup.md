@@ -14,9 +14,10 @@ standard images, both from this repo:
   25 s, since every deploy makes a new container); the Python packages and
   models live in the data folder, so they install once.
 - `receipts-https` (`deploy/https/zima.json`) runs Caddy in `caddy:2-alpine`
-  in front of it at `https://<box>:8493`. It only
-  answers devices on your home network. Both apps stay always on, because
-  this Caddy talks to :8491 directly, which the hub's waker doesn't cover.
+  in front of it at `https://receipts.vashu.app:8493`, with a real Let's
+  Encrypt certificate (below). It only answers devices on your home network.
+  Both apps stay always on, because this Caddy talks to :8491 directly, which
+  the hub's waker doesn't cover.
 
 The hub also gives each app its own LAN port (`zima status`); the app itself
 is on that one without HTTPS.
@@ -30,7 +31,7 @@ Data/apps/receipts/data/
   venv/       Python packages
   models/     the reading and search models
   cache/
-Data/apps/receipts-https/data/   Caddy's own files, including the local CA
+Data/apps/receipts-https/data/   the certificate (lego/) and Caddy's own files
 ```
 
 ## Deploying
@@ -74,25 +75,31 @@ cd backend && DATA_DIR=data-dev STATIC_DIR=../frontend/dist MODEL_CACHE=.models 
 
 Tests: `python -m pytest` in `backend/`, `npm test` in `frontend/`.
 
-## Optional: HTTPS for phones
+## HTTPS for phones
 
-You don't need this. Over plain HTTP everything works, and the scan button
-opens your phone's camera app. HTTPS adds a live viewfinder inside the app and
-lets you install it as a proper home-screen app. It also encrypts your
-password on the Wi-Fi.
+Over plain HTTP everything works, and the scan button opens your phone's
+camera app. HTTPS adds the live viewfinder inside the app and lets you
+install it on the home screen. Phones need a certificate they already trust,
+so `receipts-https` gets a real one from Let's Encrypt for
+`receipts.vashu.app`, with nothing to install on any phone.
 
-To turn it on:
+How it works: `deploy/https/run.sh` asks Let's Encrypt for the certificate
+with a DNS challenge (a temporary TXT record in Cloudflare, made with the
+`CLOUDFLARE_API_TOKEN` secret), checks for renewal daily, and reloads Caddy
+when it renews. Nothing is exposed to the internet: `receipts.vashu.app` is a
+DNS-only A record pointing at the box's LAN address, so it only works at home.
 
-1. `RECEIPTS_HOST` in `deploy/https/zima.json` is the box's IP address on your
-   network; change it there if that changes.
-2. On each phone, open `https://<server>:8493/ca.crt` and install the
-   certificate.
-   - iPhone: Settings → General → VPN & Device Management → install the
-     profile, then Settings → General → About → Certificate Trust Settings →
-     turn on "Caddy Local Authority".
-   - Android: Settings → Security → Encryption & credentials → Install a
-     certificate → CA certificate.
-3. Open `https://<server>:8493` from then on.
+One-time setup:
 
-Keep `Data/apps/receipts-https/data`: if it's lost, every phone has to install a new
-certificate.
+1. Cloudflare → My Profile → API Tokens → create a token with
+   *Zone / DNS / Edit* on `vashu.app` only.
+2. `zima secret set receipts-https CLOUDFLARE_API_TOKEN` (it reads the value
+   from stdin).
+3. Cloudflare DNS: an `A` record `receipts` → `192.168.68.80`, DNS only (grey
+   cloud). It takes precedence over the `*.vashu.app` tunnel record.
+
+Then open `https://receipts.vashu.app:8493`. If a router blocks DNS answers
+that point at private addresses ("DNS rebinding protection"), allow
+`vashu.app` there. To try changes without using up Let's Encrypt's limits,
+add `"ACME_SERVER": "https://acme-staging-v02.api.letsencrypt.org/directory"`
+to the app's `vars`, and remove `/data/lego` afterwards.

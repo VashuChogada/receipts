@@ -1,20 +1,17 @@
-# Receipts' own Caddy (docs/setup.md). The ports and the server's LAN address
-# come from the environment (deploy/https/zima.json); the defaults are below.
+# Receipts' HTTPS front (docs/setup.md). The ports and the hostname come from
+# the environment (deploy/https/zima.json); the defaults are below.
 #
-#   https://<host>:8493   the app, with a certificate from Caddy's own local CA.
-#                         Phones that trust /ca.crt get the live camera
-#                         viewfinder and can install the app.
+#   https://<RECEIPTS_HOST>:8493   the app, with a Let's Encrypt certificate that
+#                                  deploy/https/run.sh fetches, so phones need
+#                                  nothing installed. The name points at the
+#                                  box's LAN address in DNS.
 #
 # LAN only: anything from a public address, or relayed by a Cloudflare tunnel,
 # is dropped.
 {
-	# Only on the server's loopback, for --watch reloads.
+	# Only on the server's loopback, for the certificate renewal's reload.
 	admin localhost:{$CADDY_ADMIN_PORT:2493}
-	local_certs
-	skip_install_trust
 	auto_https disable_redirects
-	# Phones connecting by IP send no SNI; use the IP's certificate for them.
-	default_sni {$RECEIPTS_HOST:localhost}
 }
 
 (app) {
@@ -37,22 +34,12 @@
 }
 
 # Loopback only: zima-hub's own LAN port for this app (deploy/https/zima.json)
-# proxies here. Phones and the PC use the https address.
+# proxies here.
 http://127.0.0.1:{$HTTP_PORT:8490} {
 	import app
 }
 
-https://{$RECEIPTS_HOST:localhost}:{$HTTPS_PORT:8493} {
-	tls internal
-	# The root of Caddy's local CA, for a phone to trust once.
-	handle /ca.crt {
-		root * /data/caddy/pki/authorities/local
-		rewrite * /root.crt
-		header Content-Type application/x-x509-ca-cert
-		header Content-Disposition "attachment; filename=receipts-ca.crt"
-		file_server
-	}
-	handle {
-		import app
-	}
+https://{$RECEIPTS_HOST}:{$HTTPS_PORT:8493} {
+	tls /data/lego/certificates/{$RECEIPTS_HOST}.crt /data/lego/certificates/{$RECEIPTS_HOST}.key
+	import app
 }
