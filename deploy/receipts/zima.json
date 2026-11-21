@@ -1,9 +1,8 @@
 {
   "kind": "container",
-  "image": "python:3.12-slim",
+  "dockerfile": "Dockerfile",
+  "context": "out",
   "build": "sh ../../scripts/assemble.sh",
-  "app": "out",
-  "cmd": "sh /app/start.sh",
   "port": 8491,
   "memory": "1g",
   "idle": "never",

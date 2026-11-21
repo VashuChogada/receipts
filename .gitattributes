@@ -1,2 +1,3 @@
 *.sh text eol=lf
 deploy/https/Caddyfile text eol=lf
+deploy/receipts/Dockerfile text eol=lf

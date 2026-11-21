@@ -5,14 +5,15 @@ The README has the quick version. This covers the rest.
 ## What runs where
 
 Two hub apps ([zima-hub](https://github.com/VashuChogada/zima-hub)), both from
-standard images, both from this repo:
+this repo:
 
-- `receipts` (`deploy/receipts/zima.json`) runs the app in `python:3.12-slim`,
-  listening on 127.0.0.1:8491. Its build (`scripts/assemble.sh`) builds the
-  web app and assembles the code into `deploy/receipts/out`, which the
-  container mounts read-only at `/app`. Each start installs Tesseract (about
-  25 s, since every deploy makes a new container); the Python packages and
-  models live in the data folder, so they install once.
+- `receipts` (`deploy/receipts/zima.json`) runs the app on 127.0.0.1:8491.
+  Its build (`scripts/assemble.sh`) builds the web app and assembles the code
+  into `deploy/receipts/out`. The hub then builds `deploy/receipts/Dockerfile`
+  from that folder: `python:3.12-slim` plus Tesseract, poppler and the Python
+  packages. Docker reuses the apt and pip layers until `requirements.txt`
+  changes, so a code-only deploy takes seconds. The models live in the data
+  folder, so they download once.
 - `receipts-https` (`deploy/https/zima.json`) runs Caddy in `caddy:2-alpine`
   in front of it at `https://<box>:8493`. It only
   answers devices on your home network. Both apps stay always on, because
@@ -27,7 +28,6 @@ On the box:
 Data/apps/receipts/data/
   receipts/   your scans and their .json files: back this up
   receipts.db search index, rebuilt from receipts/ if it's missing
-  venv/       Python packages
   models/     the reading and search models
   cache/
 Data/apps/receipts-https/data/   Caddy's own files, including the local CA

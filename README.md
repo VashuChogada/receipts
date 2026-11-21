@@ -67,9 +67,10 @@ embedding model (bge-small) so "coffee" also finds a Starbucks receipt. Both
 models load only when needed and unload after a few minutes, so the app idles
 at about 60 MB of memory.
 
-It runs on two standard Docker images (`python:3.12-slim` and
-`caddy:2-alpine`). There's no custom image to build or download: the hub
-assembles the code into a folder and the containers run it from there.
+It runs in two containers. The app's image is built by the hub on each
+deploy from `deploy/receipts/Dockerfile` (`python:3.12-slim` with Tesseract
+and the Python packages in it); Caddy runs from the standard
+`caddy:2-alpine`.
 It's meant for your home network only, and turns away requests from the
 internet.
 

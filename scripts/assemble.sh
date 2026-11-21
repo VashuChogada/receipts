@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # The "build" of deploy/receipts/zima.json, run by zima-hub in that folder: builds the UI and
-# assembles what the container mounts at /app into deploy/receipts/out.
+# assembles deploy/receipts/out, the folder its Dockerfile builds from.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$ROOT/deploy/receipts/out"
